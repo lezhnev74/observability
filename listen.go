@@ -2,7 +2,6 @@ package observability
 
 import (
 	"log"
-	"time"
 )
 
 // This code covers listening for metrics sent from apps
@@ -31,10 +30,10 @@ func scanMessages(messages <-chan []byte) {
 			log.Printf("invalid incoming message: less than 13 bytes")
 			continue
 		}
-
-		var t uint32
-
-		m := Metric{}
-		m.Timestamp = time.UnixMilli(t * 1000)
+		//
+		// var t uint32
+		//
+		// m := Metric{}
+		// m.Timestamp = time.UnixMilli(t * 1000)
 	}
 }

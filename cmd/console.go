@@ -6,8 +6,10 @@ import (
 )
 
 func main() {
-	url := "http://127.0.0.1:8080/status"
-	stats, err := observability.PollFpmStatus(url)
+	addr := "127.0.0.1:9090"
+	path := "/status"
+
+	stats, err := observability.PollFpmPoolStatus(addr, path)
 	if err != nil {
 		log.Fatal(err)
 	}

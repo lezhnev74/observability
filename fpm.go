@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"os/exec"
 )
 
 // FpmStatus is a mapping from what Fpm status page returns
@@ -28,25 +28,35 @@ type FpmStatus struct {
 	SlowRequests int `json:"slow requests"`
 }
 
-// PollFpmStatus connects to FPM directly and reads out the stats data
+// PollFpmPoolStatus connects to FPM directly and reads out the stats data
 // It does not involve the web server.
-func PollFpmStatus(FpmPoolStatsUrl string) (*FpmStatus, error) {
-	jsonUrl := fmt.Sprintf("%s?json", FpmPoolStatsUrl)
-	resp, err := http.Get(jsonUrl)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get FPM stats: %s", err)
+func PollFpmPoolStatus(address, statusPath string) (*FpmStatus, error) {
+
+	c := exec.Command("cgi-fcgi", "-bind", "-connect", address)
+	c.Env = []string{
+		fmt.Sprintf("SCRIPT_NAME=%s", statusPath),
+		fmt.Sprintf("SCRIPT_FILENAME=%s", statusPath),
+		"QUERY_STRING=json",
+		"REQUEST_METHOD=GET",
 	}
 
-	buf := bytes.NewBuffer(nil)
-	_, err = buf.ReadFrom(resp.Body)
+	cmdOut := bytes.NewBuffer(nil)
+	c.Stdout = cmdOut
+
+	err := c.Run()
 	if err != nil {
-		return nil, fmt.Errorf("unable to read body of FPM stats: %s", err)
+		return nil, fmt.Errorf("unable to read FPM stats: %w", err)
+	}
+
+	_, jsonStats, ok := bytes.Cut(cmdOut.Bytes(), []byte("\r\n\r\n"))
+	if !ok {
+		return nil, fmt.Errorf("unexpected FPM stats response: \n%s", cmdOut.Bytes())
 	}
 
 	var s FpmStatus
-	err = json.Unmarshal(buf.Bytes(), &s)
+	err = json.Unmarshal(jsonStats, &s)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse FPM stats: %s", err)
+		return nil, fmt.Errorf("unable to parse FPM stats: %w, source string:\n%s", err, jsonStats)
 	}
 
 	return &s, nil
