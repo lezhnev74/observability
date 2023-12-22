@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  ch:
+    image: clickhouse/clickhouse-server:latest
+    volumes:
+      - ./var/ch_data/:/var/lib/clickhouse/
+    ports:
+      - 8123:8123
+  grafana:
+    image: grafana/grafana-enterprise:latest
+    volumes:
+      - ./var/grafana/:/var/lib/grafana/
+    ports:
+      - 3000:3000
