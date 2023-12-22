@@ -35,6 +35,38 @@ func main() {
 
 	metricIngest := observability.ClickhouseInsert(ctx, ch, cfg.Clickhouse.Table)
 
+	// Accept:
+	go func() {
+		path := fmt.Sprintf("%s:%s", cfg.Listen.Host, cfg.Listen.Port)
+		pc, err := net.ListenPacket("udp", path)
+		if err != nil {
+			log.Fatalf("server failed: %s", err)
+		}
+		defer pc.Close()
+		log.Printf("listen started")
+
+		buf := make([]byte, 1024*1024)
+		for {
+			n, _, err := pc.ReadFrom(buf)
+			if err != nil {
+				log.Printf("unable to read incoming data: %s", err)
+				break
+			}
+			if n == len(buf) {
+				log.Printf("incoming data is too big")
+			}
+
+			m, err := observability.ParseMetric(buf[:n])
+			if err != nil {
+				log.Printf("unable to parse incoming data: %s", err)
+				continue
+			}
+			metricIngest <- m
+		}
+
+		log.Printf("stop listening")
+	}()
+
 	for _, observe := range cfg.Observe {
 
 		if observe.PollIntervalSec < 1 {
@@ -42,33 +74,6 @@ func main() {
 		}
 
 		interval := time.Second * time.Duration(observe.PollIntervalSec)
-
-		// Accept:
-		incoming := observability.ReadMetrics()
-		go func() {
-			path := fmt.Sprintf("%s:%s", cfg.Listen.Host, cfg.Listen.Port)
-			pc, err := net.ListenPacket("udp", path)
-			if err != nil {
-				log.Fatalf("server failed: %w", err)
-			}
-			defer pc.Close()
-
-			buf := make([]byte, 1024*1024)
-			for {
-				n, _, err := pc.ReadFrom(buf)
-				if err != nil {
-					log.Printf("unable to read incoming data: %w", err)
-					break
-				}
-				if n == len(buf) {
-					log.Printf("incoming data is too big")
-				}
-
-				incoming <- buf[:n]
-			}
-
-			log.Printf("stop listening")
-		}()
 
 		// FPM:
 		if observe.FpmPoolStatsAddr != "" {
