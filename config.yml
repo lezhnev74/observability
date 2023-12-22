@@ -1,0 +1,16 @@
+listen:
+  protocol: udp
+  host: 0.0.0.0
+  port: 55655
+clickhouse:
+  host: localhost
+  port: 9000
+  database: default
+  table: observability
+  username: default
+  password:
+observe:
+  - poll_interval_sec: 1
+    fpm_addr: 127.0.0.1:9090
+    fpm_path: /status
+

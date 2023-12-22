@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"time"
 )
 
 // FpmStatus is a mapping from what Fpm status page returns
 // see https://www.php.net/manual/en/fpm.status.php
 type FpmStatus struct {
 	// The name of the FPM process pool.
-	Name string `json:"pool"`
+	PoolName string `json:"pool"`
 	// The total number of accepted connections.
 	TotalAccepted int `json:"accepted conn"`
 	// The number of requests (backlog) currently waiting for a free process.
@@ -60,4 +61,52 @@ func PollFpmPoolStatus(address, statusPath string) (*FpmStatus, error) {
 	}
 
 	return &s, nil
+}
+
+func MapFpmToMetrics(status FpmStatus) []Metric {
+	m := []Metric{
+		{
+			Timestamp: time.Now(),
+			Metric:    "fpm_accepted_total",
+			Value:     int64(status.TotalAccepted),
+			Tag1:      status.PoolName,
+		},
+		{
+			Timestamp: time.Now(),
+			Metric:    "fpm_slow",
+			Value:     int64(status.SlowRequests),
+			Tag1:      status.PoolName,
+		},
+		{
+			Timestamp: time.Now(),
+			Metric:    "fpm_idle",
+			Value:     int64(status.IdleProcesses),
+			Tag1:      status.PoolName,
+		},
+		{
+			Timestamp: time.Now(),
+			Metric:    "fpm_active",
+			Value:     int64(status.ActiveProcesses),
+			Tag1:      status.PoolName,
+		},
+		{
+			Timestamp: time.Now(),
+			Metric:    "fpm_active_max",
+			Value:     int64(status.MaxActiveProcesses),
+			Tag1:      status.PoolName,
+		},
+		{
+			Timestamp: time.Now(),
+			Metric:    "fpm_queue",
+			Value:     int64(status.CurrentWaitingClients),
+			Tag1:      status.PoolName,
+		},
+		{
+			Timestamp: time.Now(),
+			Metric:    "fpm_queue_max",
+			Value:     int64(status.MaxWaitingClients),
+			Tag1:      status.PoolName,
+		},
+	}
+	return m
 }
