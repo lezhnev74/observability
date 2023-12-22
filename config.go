@@ -2,9 +2,7 @@ package observability
 
 type Config struct {
 	Listen struct {
-		Protocol   string // tcp, udp, unix
-		Host, Port string // 127.0.0.1:55678
-		Unix       string // /var/observe.sock
+		Host, Port string // 127.0.0.1:55678 (udp)
 	}
 	Clickhouse struct{ Host, Port, Database, Table, Username, Password string }
 	Observe    []struct {

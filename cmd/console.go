@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"github.com/lezhnev74/observability"
 	"gopkg.in/yaml.v3"
 	"log"
+	"net"
 	"os"
 	"time"
 )
@@ -40,6 +42,33 @@ func main() {
 		}
 
 		interval := time.Second * time.Duration(observe.PollIntervalSec)
+
+		// Accept:
+		incoming := observability.ReadMetrics()
+		go func() {
+			path := fmt.Sprintf("%s:%s", cfg.Listen.Host, cfg.Listen.Port)
+			pc, err := net.ListenPacket("udp", path)
+			if err != nil {
+				log.Fatalf("server failed: %w", err)
+			}
+			defer pc.Close()
+
+			buf := make([]byte, 1024*1024)
+			for {
+				n, _, err := pc.ReadFrom(buf)
+				if err != nil {
+					log.Printf("unable to read incoming data: %w", err)
+					break
+				}
+				if n == len(buf) {
+					log.Printf("incoming data is too big")
+				}
+
+				incoming <- buf[:n]
+			}
+
+			log.Printf("stop listening")
+		}()
 
 		// FPM:
 		if observe.FpmPoolStatsAddr != "" {
