@@ -1,6 +1,6 @@
 listen:
   protocol: udp
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: 55655
 clickhouse:
   host: localhost
@@ -10,7 +10,7 @@ clickhouse:
   username: default
   password:
 observe:
-#  - poll_interval_sec: 1
-#    fpm_addr: 127.0.0.1:9090
-#    fpm_path: /status
+  - poll_interval_sec: 5
+    fpm_addr: 127.0.0.1:9090
+    fpm_path: /status
 
